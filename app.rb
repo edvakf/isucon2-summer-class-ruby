@@ -2,6 +2,7 @@ require 'sinatra/base'
 require 'slim'
 require 'json'
 require 'mysql2'
+require 'dalli'
 
 class Isucon2App < Sinatra::Base
   $stdout.sync = true
