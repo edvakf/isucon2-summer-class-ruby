@@ -18,7 +18,28 @@ class Isucon2App < Sinatra::Base
     2 => {"id" => 2, "name" => 'はだいろクローバーZ'},
   }
 
+  @@variation_h = {
+    1 => {'id' => 1, 'name' => 'アリーナ席', 'ticket_id' => 1},
+    2 => {'id' => 2, 'name' => 'スタンド席', 'ticket_id' => 1},
+    3 => {'id' => 3, 'name' => 'アリーナ席', 'ticket_id' => 2},
+    4 => {'id' => 4, 'name' => 'スタンド席', 'ticket_id' => 2},
+    5 => {'id' => 5, 'name' => 'アリーナ席', 'ticket_id' => 3},
+    6 => {'id' => 6, 'name' => 'スタンド席', 'ticket_id' => 3},
+    7 => {'id' => 7, 'name' => 'アリーナ席', 'ticket_id' => 4},
+    8 => {'id' => 8, 'name' => 'スタンド席', 'ticket_id' => 4},
+    9 => {'id' => 9, 'name' => 'アリーナ席', 'ticket_id' => 5},
+    10 => {'id' => 10, 'name' => 'スタンド席', 'ticket_id' => 5},
+  }
+
   helpers do
+    def memcache
+      if @mc.nil?
+        @mc = Dalli::Client.new('localhost:11211', {:namespace => "isucon"})
+      else
+        @mc
+      end
+    end
+
     def connection
       config = JSON.parse(IO.read(File.dirname(__FILE__) + "/../config/common.#{ ENV['ISUCON_ENV'] || 'local' }.json"))['database']
       Mysql2::Client.new(
@@ -65,11 +86,17 @@ class Isucon2App < Sinatra::Base
       "SELECT id, name FROM ticket WHERE artist_id = #{ mysql.escape(artist['id'].to_s) } ORDER BY id",
     )
     tickets.each do |ticket|
-      ticket["count"] = mysql.query(
-        "SELECT COUNT(*) AS cnt FROM variation
-         INNER JOIN stock ON stock.variation_id = variation.id
-         WHERE variation.ticket_id = #{ mysql.escape(ticket['id'].to_s) } AND stock.order_id IS NULL",
-      ).first["cnt"]
+      cache = memcache.get("ticket_left_by_ticket_id_#{ticket['id'].to_s}")
+      if !cache.nil?
+        ticket["count"] = cache
+      else
+        ticket["count"] = mysql.query(
+          "SELECT COUNT(*) AS cnt FROM variation
+           INNER JOIN stock ON stock.variation_id = variation.id
+           WHERE variation.ticket_id = #{ mysql.escape(ticket['id'].to_s) } AND stock.order_id IS NULL",
+        ).first["cnt"]
+        memcache.set("ticket_left_by_ticket_id_#{ticket['id'].to_s}", ticket["count"])
+      end
     end
     slim :artist, :locals => {
       :artist  => artist,
@@ -121,6 +148,9 @@ class Isucon2App < Sinatra::Base
         "SELECT seat_id FROM stock WHERE order_id = #{ mysql.escape(order_id.to_s) } LIMIT 1",
       ).first['seat_id']
       mysql.query('COMMIT')
+      if memcache.get("ticket_left_by_ticket_id_#{@@variation_h[params[:variation_id].to_i]['ticket_id']}")
+        memcache.decr("ticket_left_by_ticket_id_#{@@variation_h[params[:variation_id].to_i]['ticket_id']}", 1)
+      end
       slim :complete, :locals => { :seat_id => seat_id, :member_id => params[:member_id] }
     else
       mysql.query('ROLLBACK')
