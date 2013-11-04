@@ -32,8 +32,10 @@ class Isucon2App < Sinatra::Base
     def recent_sold
       mysql = connection
       results = memcache.get('recent_sold')
-      if results.nil?
-        results = mysql.query(
+      if !results.nil?
+        return JSON.parse(results)
+      else
+        query = mysql.query(
           'SELECT stock.seat_id, variation.name AS v_name, ticket.name AS t_name, artist.name AS a_name FROM stock
              JOIN variation ON stock.variation_id = variation.id
              JOIN ticket ON variation.ticket_id = ticket.id
@@ -41,9 +43,13 @@ class Isucon2App < Sinatra::Base
            WHERE order_id IS NOT NULL
            ORDER BY order_id DESC LIMIT 10',
         )
-        memcache.set('recent_sold', results, 10)
+        results = []
+        query.each {|item|
+          results << item
+        }
+        memcache.set('recent_sold', JSON.generate(results), 10)
+        return results
       end
-      results
     end
   end
 
