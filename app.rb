@@ -77,6 +77,7 @@ class Isucon2App < Sinatra::Base
       "SELECT variation.ticket_id, COUNT(*) AS cnt FROM variation
        INNER JOIN stock ON stock.variation_id = variation.id
        WHERE stock.order_id IS NULL
+       AND variation.ticket_id IN (#{tickets_h.map{|k,v| k}.join(",")})
        GROUP BY variation.ticket_id",
     ).each do |res|
       ticket_id = res['ticket_id'].to_i
