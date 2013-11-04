@@ -59,12 +59,7 @@ class Isucon2App < Sinatra::Base
   end
 
   get '/artist/:artistid' do
-    artist = nil
-    @@artists.each do |a|
-      if a['id'] == params[:artistid].to_i
-        artist = a
-      end
-    end
+    artist = @@artists_h[params[:artistid].to_i]
     mysql = connection
     tickets = mysql.query(
       "SELECT id, name FROM ticket WHERE artist_id = #{ mysql.escape(artist['id'].to_s) } ORDER BY id",
