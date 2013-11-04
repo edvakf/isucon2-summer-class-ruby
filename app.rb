@@ -13,6 +13,11 @@ class Isucon2App < Sinatra::Base
     {"id" => 2, "name" => 'はだいろクローバーZ'},
   ]
 
+  @@artists_h = {
+    1 => {"id" => 1, "name" => 'NHN48'},
+    2 => {"id" => 2, "name" => 'はだいろクローバーZ'},
+  }
+
   helpers do
     def connection
       config = JSON.parse(IO.read(File.dirname(__FILE__) + "/../config/common.#{ ENV['ISUCON_ENV'] || 'local' }.json"))['database']
@@ -28,14 +33,20 @@ class Isucon2App < Sinatra::Base
 
     def recent_sold
       mysql = connection
-      mysql.query(
-        'SELECT stock.seat_id, variation.name AS v_name, ticket.name AS t_name, artist.name AS a_name FROM stock
+      query = mysql.query(
+        'SELECT stock.seat_id, variation.name AS v_name, ticket.name AS t_name, ticket.artist_id AS a_id FROM stock
            JOIN variation ON stock.variation_id = variation.id
            JOIN ticket ON variation.ticket_id = ticket.id
-           JOIN artist ON ticket.artist_id = artist.id
          WHERE order_id IS NOT NULL
          ORDER BY order_id DESC LIMIT 10',
       )
+
+      res = []
+      query.each {|item|
+        item['a_name'] = @@artists_h[item['a_id'].to_i]['name']
+        res << item
+      }
+      return res
     end
   end
 
