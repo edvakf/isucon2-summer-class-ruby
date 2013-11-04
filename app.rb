@@ -95,7 +95,7 @@ class Isucon2App < Sinatra::Base
            INNER JOIN stock ON stock.variation_id = variation.id
            WHERE variation.ticket_id = #{ mysql.escape(ticket['id'].to_s) } AND stock.order_id IS NULL",
         ).first["cnt"]
-        memcache.set("ticket_left_by_ticket_id_#{ticket['id'].to_s}", ticket["count"])
+        memcache.set("ticket_left_by_ticket_id_#{ticket['id'].to_s}", ticket["count"].to_i, 60, :raw => true)
       end
     end
     slim :artist, :locals => {
