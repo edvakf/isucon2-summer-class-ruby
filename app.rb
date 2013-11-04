@@ -9,6 +9,14 @@ class Isucon2App < Sinatra::Base
   set :slim, :pretty => true, :layout => true
 
   helpers do
+    def memcache
+      if @mc.nil?
+        @mc = Dalli::Client.new('localhost:11211', { :namespace => "isucon", :compress => true })
+      else
+        @mc
+      end
+    end
+
     def connection
       config = JSON.parse(IO.read(File.dirname(__FILE__) + "/../config/common.#{ ENV['ISUCON_ENV'] || 'local' }.json"))['database']
       Mysql2::Client.new(
@@ -23,14 +31,19 @@ class Isucon2App < Sinatra::Base
 
     def recent_sold
       mysql = connection
-      mysql.query(
-        'SELECT stock.seat_id, variation.name AS v_name, ticket.name AS t_name, artist.name AS a_name FROM stock
-           JOIN variation ON stock.variation_id = variation.id
-           JOIN ticket ON variation.ticket_id = ticket.id
-           JOIN artist ON ticket.artist_id = artist.id
-         WHERE order_id IS NOT NULL
-         ORDER BY order_id DESC LIMIT 10',
-      )
+      results = memcache.get('recent_sold')
+      if results.nil?
+        results = mysql.query(
+          'SELECT stock.seat_id, variation.name AS v_name, ticket.name AS t_name, artist.name AS a_name FROM stock
+             JOIN variation ON stock.variation_id = variation.id
+             JOIN ticket ON variation.ticket_id = ticket.id
+             JOIN artist ON ticket.artist_id = artist.id
+           WHERE order_id IS NOT NULL
+           ORDER BY order_id DESC LIMIT 10',
+        )
+        memcache.set('recent_sold', results, 10)
+      end
+      results
     end
   end
 
