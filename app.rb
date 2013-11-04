@@ -80,10 +80,10 @@ class Isucon2App < Sinatra::Base
   get '/ticket/:ticketid' do
     mysql = connection
     ticket = mysql.query(
-      "SELECT t.*, a.name AS artist_name FROM ticket t
-       INNER JOIN artist a ON t.artist_id = a.id
+      "SELECT t.* FROM ticket t
        WHERE t.id = #{ mysql.escape(params[:ticketid]) } LIMIT 1",
     ).first
+    ticket['artist_name'] = @@artists_h[ticket['artist_id'].to_i]['name']
     variations = mysql.query(
       "SELECT id, name FROM variation WHERE ticket_id = #{ mysql.escape(ticket['id'].to_s) } ORDER BY id",
     )
