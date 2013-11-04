@@ -18,11 +18,6 @@ class Isucon2App < Sinatra::Base
     2 => {"id" => 2, "name" => 'はだいろクローバーZ'},
   }
 
-  @@variation_h = {
-    1 => {"id" => 1, "name" => 'NHN48'},
-    2 => {"id" => 2, "name" => 'はだいろクローバーZ'},
-  }
-
   helpers do
     def connection
       config = JSON.parse(IO.read(File.dirname(__FILE__) + "/../config/common.#{ ENV['ISUCON_ENV'] || 'local' }.json"))['database']
@@ -69,19 +64,12 @@ class Isucon2App < Sinatra::Base
     tickets = mysql.query(
       "SELECT id, name FROM ticket WHERE artist_id = #{ mysql.escape(artist['id'].to_s) } ORDER BY id",
     )
-    tickets_h = {} # ticket_id => ticket
-    tickets.each do |t|
-      tickets_h[t['id'].to_i] = t
-    end
-    mysql.query(
-      "SELECT variation.ticket_id, COUNT(*) AS cnt FROM variation
-       INNER JOIN stock ON stock.variation_id = variation.id
-       WHERE stock.order_id IS NULL
-       AND variation.ticket_id IN (#{tickets_h.map{|k,v| k}.join(",")})
-       GROUP BY variation.ticket_id",
-    ).each do |res|
-      ticket_id = res['ticket_id'].to_i
-      tickets_h[ticket_id]['count'] = res['cnt'].to_i unless tickets_h[ticket_id].nil?
+    tickets.each do |ticket|
+      ticket["count"] = mysql.query(
+        "SELECT COUNT(*) AS cnt FROM variation
+         INNER JOIN stock ON stock.variation_id = variation.id
+         WHERE variation.ticket_id = #{ mysql.escape(ticket['id'].to_s) } AND stock.order_id IS NULL",
+      ).first["cnt"]
     end
     slim :artist, :locals => {
       :artist  => artist,
