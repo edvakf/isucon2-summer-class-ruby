@@ -1,6 +1,7 @@
 GEM
-  remote: http://rubygems.org/
+  remote: https://rubygems.org/
   specs:
+    dalli (2.6.4)
     json (1.7.5)
     kgio (2.7.4)
     mysql2 (0.3.11)
@@ -28,6 +29,7 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
+  dalli
   json (= 1.7.5)
   mysql2 (= 0.3.11)
   shotgun
