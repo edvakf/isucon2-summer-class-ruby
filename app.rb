@@ -8,6 +8,11 @@ class Isucon2App < Sinatra::Base
   $stdout.sync = true
   set :slim, :pretty => true, :layout => true
 
+  @@artists = [
+    {"id" => 1, "name" => 'NHN48'},
+    {"id" => 2, "name" => 'はだいろクローバーZ'},
+  ]
+
   helpers do
     def connection
       config = JSON.parse(IO.read(File.dirname(__FILE__) + "/../config/common.#{ ENV['ISUCON_ENV'] || 'local' }.json"))['database']
@@ -37,10 +42,8 @@ class Isucon2App < Sinatra::Base
   # main
 
   get '/' do
-    mysql = connection
-    artists = mysql.query("SELECT * FROM artist ORDER BY id")
     slim :index, :locals => {
-      :artists => artists,
+      :artists => @@artists,
     }
   end
 
