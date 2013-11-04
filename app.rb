@@ -18,6 +18,11 @@ class Isucon2App < Sinatra::Base
     2 => {"id" => 2, "name" => 'はだいろクローバーZ'},
   }
 
+  @@variation_h = {
+    1 => {"id" => 1, "name" => 'NHN48'},
+    2 => {"id" => 2, "name" => 'はだいろクローバーZ'},
+  }
+
   helpers do
     def connection
       config = JSON.parse(IO.read(File.dirname(__FILE__) + "/../config/common.#{ ENV['ISUCON_ENV'] || 'local' }.json"))['database']
